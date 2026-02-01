@@ -22,5 +22,10 @@ def ask():
     except Exception as e:
         return jsonify({"reply": f"عذراً يا Akasha AI، حصل خطأ: {str(e)}"}), 500
 
+import os
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Render بيحدد المنفذ تلقائياً في المتغير PORT
+    port = int(os.environ.get("PORT", 5000))
+    # التشغيل على 0.0.0.0 ليتمكن العالم من الوصول للموقع
+    app.run(host='0.0.0.0', port=port)
