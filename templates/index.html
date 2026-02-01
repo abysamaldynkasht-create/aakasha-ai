@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Akasha AI 🤖</title>
+<style>
+    /* ====================== أساسي ====================== */
+    * { box-sizing: border-box; margin:0; padding:0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    body, html { width:100%; height:100%; overflow:hidden; background:#000; color:#fff; }
+    
+    /* ====================== النجوم ====================== */
+    canvas { position:absolute; top:0; left:0; z-index:0; pointer-events: none; }
+
+    /* ====================== شاشة البداية ====================== */
+    #startScreen {
+        position:absolute; top:0; left:0; width:100%; height:100%;
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        z-index:10; text-align:center; background: rgba(0,0,0,0.8);
+    }
+    #startScreen img { width:150px; margin-bottom:20px; border-radius: 50%; border: 2px solid #fff; }
+    #startScreen h1 { font-size:40px; margin-bottom:10px; background: linear-gradient(to right, #4285f4, #d96570); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    #startChat { 
+        padding: 15px 30px; background: #fff; color: #000; border-radius: 30px; 
+        font-weight: bold; cursor:pointer; margin-top: 20px; transition: 0.3s;
+    }
+    #startChat:hover { transform: scale(1.1); background: #4285f4; color: #fff; }
+    #startScreen a { color: rgba(255,255,255,0.5); text-decoration:none; margin-top: 20px; font-size:14px; }
+
+    /* ====================== شاشة الدردشة ====================== */
+    #chatScreen { 
+        display:none; 
+        position:absolute; top:0; left:0; width:100%; height:100%;
+        flex-direction:column; z-index:5; background: transparent;
+    }
+    #chatBox { flex:1; padding:20px; overflow-y:auto; display: flex; flex-direction: column; }
+    .msg { max-width:75%; padding:12px 18px; border-radius:15px; margin:8px 0; word-wrap: break-word; line-height: 1.5; }
+    .user { background:#37393b; color:#fff; align-self:flex-start; border-bottom-right-radius: 2px; }
+    .bot { background:#fff; color:#000; align-self:flex-end; border-bottom-left-radius: 2px; }
+
+    /* ====================== ميزة المرفقات (جديد) ====================== */
+    .attach-container { position: relative; display: flex; align-items: center; }
+    #plusBtn { 
+        width: 45px; height: 45px; border-radius: 50%; border: none; 
+        background: #333; color: white; font-size: 24px; cursor: pointer; 
+        margin-left: 10px; transition: 0.3s;
+    }
+    #plusBtn:hover { background: #444; transform: rotate(90deg); }
+
+    .options-menu {
+        display: none; position: absolute; bottom: 60px; right: 0;
+        background: #1e1f20; border: 1px solid #3c4043; border-radius: 15px;
+        padding: 10px; width: 140px; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+    .options-menu label { 
+        display: block; padding: 10px; cursor: pointer; font-size: 14px; 
+        transition: 0.2s; border-radius: 8px; text-align: right;
+    }
+    .options-menu label:hover { background: #4285f4; color: white; }
+
+    /* ====================== الإدخال ====================== */
+    #inputArea { display:flex; padding:20px; background: rgba(17, 17, 17, 0.9); border-top: 1px solid #333; align-items: center; }
+    #userInput { flex:1; padding:12px 20px; border-radius:25px; border:none; outline:none; color:#000; font-size: 16px; }
+    #sendBtn { margin-right:10px; padding:10px 25px; border:none; border-radius:25px; background:#4285f4; cursor:pointer; color:#fff; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div id="startScreen">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Akasha Logo">
+    <h1>Akasha AI</h1>
+    <div id="startChat">اضغط هنا لبدء الدردشة</div>
+    <a href="https://wa.me/96898546552" target="_blank">دعم واتساب: 96898546552</a>
+    <p class="copyright">© 2026 جميع الحقوق محفوظة لـ Akasha AI</p>
+</div>
+
+<div id="chatScreen">
+    <div id="chatBox"></div>
+    <div id="inputArea">
+        <div class="attach-container">
+            <button id="plusBtn" type="button">+</button>
+            <div id="optionsMenu" class="options-menu">
+                <label for="cameraInput">📸 كاميرا</label>
+                <label for="imageInput">🖼️ معرض الصور</label>
+                <label for="fileInput">📁 ملفات</label>
+            </div>
+        </div>
+
+        <input type="text" id="userInput" placeholder="اسأل Akasha AI أو اطلب تعديل صورة...">
+        <button id="sendBtn">إرسال</button>
+        
+        <input type="file" id="cameraInput" accept="image/*" capture="user" hidden>
+        <input type="file" id="imageInput" accept="image/*" hidden>
+        <input type="file" id="fileInput" hidden>
+    </div>
+</div>
+
+<script>
+/* ====================== النجوم المتحركة ====================== */
+const canvas = document.getElementById("stars");
+const ctx = canvas.getContext("2d");
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.onresize = resize; resize();
+
+let stars = [];
+for(let i=0;i<150;i++){
+    stars.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, r:Math.random()*2+1, speed: Math.random()*0.5+0.2});
+}
+function animateStars(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="#fff";
+    for(let s of stars){
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+        ctx.fill();
+        s.y += s.speed;
+        if(s.y > canvas.height){ s.y = 0; s.x = Math.random()*canvas.width; }
+    }
+    requestAnimationFrame(animateStars);
+}
+animateStars();
+
+/* ====================== التحكم في القائمة والواجهة ====================== */
+const startScreen = document.getElementById("startScreen");
+const chatScreen = document.getElementById("chatScreen");
+const plusBtn = document.getElementById("plusBtn");
+const optionsMenu = document.getElementById("optionsMenu");
+
+document.getElementById("startChat").onclick = () => {
+    startScreen.style.display = "none";
+    chatScreen.style.display = "flex";
+};
+
+// إظهار/إخفاء قائمة الخيارات
+plusBtn.onclick = (e) => {
+    e.stopPropagation();
+    optionsMenu.style.display = optionsMenu.style.display === "block" ? "none" : "block";
+};
+
+// إغلاق القائمة عند الضغط في أي مكان آخر
+document.onclick = () => { optionsMenu.style.display = "none"; };
+
+/* ====================== الدردشة ====================== */
+const chatBox = document.getElementById("chatBox");
+const userInput = document.getElementById("userInput");
+const sendBtn = document.getElementById("sendBtn");
+
+function addMessage(text, sender){
+    const div = document.createElement("div");
+    div.className = "msg " + sender;
+    div.textContent = text;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+async function sendMessage(){
+    const text = userInput.value.trim();
+    if(!text) return;
+    
+    addMessage(text, "user");
+    userInput.value = "";
+
+    try {
+        const response = await fetch("/ask", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({message: text})
+        });
+        const data = await response.json();
+        addMessage(data.reply, "bot");
+    } catch(err) {
+        addMessage("⚠️ عذراً، عكاشة يواجه مشكلة في الاتصال.", "bot");
+    }
+}
+
+sendBtn.onclick = sendMessage;
+userInput.onkeypress = (e) => { if(e.key === "Enter") sendMessage(); };
+
+// التعامل مع المرفقات (مبدئياً تنبيه)
+[ "cameraInput", "imageInput", "fileInput" ].forEach(id => {
+    document.getElementById(id).onchange = function() {
+        if(this.files && this.files[0]) {
+            addMessage("📎 تم اختيار ملف: " + this.files[0].name, "user");
+            addMessage("جاري معالجة المرفق بذكاء Akasha AI...", "bot");
+        }
+    };
+});
+</script>
+</body>
+</html>
